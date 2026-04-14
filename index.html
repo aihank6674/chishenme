@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能家庭菜单与采买清单</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 1.5rem; margin-bottom: 1.5rem; }
+    </style>
+</head>
+<body class="text-gray-800 p-4 md:p-8 max-w-4xl mx-auto">
+    <header class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-teal-700">家庭菜单排班 & 采买助手</h1>
+        <p class="text-sm text-gray-500 mt-2">Smart Menu & Shopping List Planner</p>
+    </header>
+
+    <!-- 配置板 -->
+    <section class="card border-t-4 border-teal-500">
+        <h2 class="text-lg font-semibold mb-4 text-gray-700">⚙️ 排班配置 (Configuration)</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">生成天数 (Days)</label>
+                <select id="daysCount" class="w-full border-gray-300 rounded-md shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500">
+                    <option value="1">1 天 (1 Day)</option>
+                    <option value="3">3 天 (3 Days)</option>
+                    <option value="5">5 天 (5 Days)</option>
+                    <option value="7" selected>7 天 (1 Week)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">午餐人数 (Lunch Pax)</label>
+                <input type="number" id="lunchPax" value="3" min="0" class="w-full border-gray-300 rounded-md shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1">晚餐人数 (Dinner Pax)</label>
+                <input type="number" id="dinnerPax" value="5" min="0" class="w-full border-gray-300 rounded-md shadow-sm p-2 border focus:ring-teal-500 focus:border-teal-500">
+            </div>
+        </div>
+        <div class="mt-6 flex gap-4">
+            <button id="generateBtn" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200">
+                一键生成排班与清单 (Generate Menu)
+            </button>
+        </div>
+    </section>
+
+    <!-- 菜单展示区 -->
+    <section id="menuSection" class="hidden mb-8">
+        <h2 class="text-2xl font-bold text-teal-800 mb-4 border-b-2 border-teal-200 pb-2">📅 每日菜单 (Daily Menu)</h2>
+        <div id="menuContainer" class="space-y-6">
+            <!-- JS将动态填充此处 -->
+        </div>
+    </section>
+
+    <!-- 采买清单 -->
+    <section id="shoppingSection" class="hidden card border-t-4 border-orange-400">
+        <h2 class="text-2xl font-bold text-orange-600 mb-2 border-b-2 border-orange-100 pb-2">🛒 采买清单 (Shopping List)</h2>
+        <p class="text-sm text-gray-500 mb-4">食材数量已根据就餐人数智能折算与合并 (Amounts are intelligently scaled and merged)</p>
+        
+        <div id="shoppingListContainer" class="space-y-2">
+            <!-- JS将动态填充此处 -->
+        </div>
+    </section>
+
+    <script src="app.js"></script>
+</body>
+</html>
