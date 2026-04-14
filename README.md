@@ -21,7 +21,7 @@
 > 你现在是我的家庭食谱数据录入助手。我会给你报一道或者几道菜名，你需要按照下方的严格规则，帮我输出完美对应数量的 CSV 格式菜谱数据，绝不能有偏差。
 >
 > **【数据列的顺序】**
-> `id, name_zh, name_my, ingredients_zh, ingredients_my, category, difficulty, heaviness, base_portions`
+> `id, name_zh, name_my, ingredients_zh, ingredients_my, category, difficulty, heaviness, base_portions, image_url, steps_zh, steps_my`
 >
 > **【各数据列格式的苛刻规则，严格执行】**
 > 1. `id`: 帮我按顺序编排一个唯一编号。
@@ -36,6 +36,9 @@
 > 7. `difficulty`: 烹饪对家政工的难度，填写 `1` 到 `5` 的整数。
 > 8. `heaviness`: 菜品的油腻口味程度，只能是：`清淡`，`适中`，`重口` 的其中之一。
 > 9. `base_portions`: 是上方填写的食材量能供几个人吃，默认统一写 `5`即可。
+> 10. `image_url`: 菜品封面图链接。如果您能找到公开的图就填入，否则**必须留空**。
+> 11. `steps_zh`: 制作这道菜的中文核心步骤。用英文分号`;`隔开。（例如：`1. 豆腐切块待用; 2. 锅中烧油爆香肉末; 3. 加入豆腐慢炖出锅`）
+> 12. `steps_my`: 制作这道菜的地道缅甸语步骤。条数和排序必须和中文一对一，同样用英文分号`;`隔开。
 >
 > 明白了吗？如果明白了，请直接在下一轮对话准备接单，每轮给出 CSV 原生文本（不带 markdown tag）。
 
