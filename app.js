@@ -14,34 +14,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// 随机从数组中抽取 n 个元素（简单去重）
-function getRandomItems(array, n, excludedIds = []) {
-    let available = array.filter(item => !excludedIds.includes(item.id));
+// 更聪明的抽取算法：如果池子里不够，会智能放宽历史过滤条件，绝对不会空手而归
+function getRandomItems(array, desiredCount, recentIds = []) {
+    // 第一梯队：过滤掉最近吃过且同类别的菜
+    let available = array.filter(item => !recentIds.includes(item.id));
+    available.sort(() => 0.5 - Math.random());
+    
     let result = [];
     let heavyCount = 0;
     
-    // 简单洗牌
-    available = available.sort(() => 0.5 - Math.random());
-    
     for (let item of available) {
-        if (result.length >= n) break;
-        
-        // 控制一顿饭里重口味菜不要超过1个
-        if (item.heaviness === '重口') {
-            if (heavyCount >= 1) continue;
-            heavyCount++;
-        }
-        
+        if (result.length >= desiredCount) break;
+        // 控制一顿饭重口味不过量
+        if (item.heaviness === '重口' && heavyCount >= 1) continue;
         result.push(item);
+        if (item.heaviness === '重口') heavyCount++;
     }
     
-    // 如果过滤重口后不够n个，再随便补齐
-    if (result.length < n) {
-        let fallback = array.filter(item => !result.includes(item) && !excludedIds.includes(item.id));
-        fallback = fallback.sort(() => 0.5 - Math.random());
-        for (let x of fallback) {
-            if (result.length >= n) break;
-            result.push(x);
+    // 如果排除了最近吃过的菜之后，发现不够填满坑位（比如菜谱太少）
+    // 第二梯队：把前面排除的 recentIds 重新放进来凑数，但是尽量保持不彻底重复
+    if (result.length < desiredCount) {
+        let fallback = array.filter(item => !result.includes(item));
+        fallback.sort(() => 0.5 - Math.random());
+        for (let item of fallback) {
+            if (result.length >= desiredCount) break;
+            result.push(item);
         }
     }
     
@@ -54,40 +51,46 @@ function generatePlan() {
     const lunchPax = parseInt(document.getElementById('lunchPax').value);
     const dinnerPax = parseInt(document.getElementById('dinnerPax').value);
 
-    // 区分荤素汤
     const meats = recipeData.filter(d => d.category.includes('荤'));
     const vegs = recipeData.filter(d => d.category.includes('素'));
     const soups = recipeData.filter(d => d.category.includes('汤'));
 
     const dailyPlans = [];
-    let shoppingListRaw = []; // 用于提取食材
-    let usedIds = [];
+    let shoppingListRaw = [];
+    
+    // 记录每天吃过的菜的ID池，滑动窗口，尽量保证短期不重样
+    let history = []; 
 
-    // 排班循环
     for (let i = 1; i <= days; i++) {
-        // 午餐配置: 1荤 1素 (人少时简单吃)
-        let lunchMeats = getRandomItems(meats, 1, usedIds);
-        let lunchVegs = getRandomItems(vegs, 1, usedIds.concat(lunchMeats.map(m=>m.id)));
-        let lunchItems = [...lunchMeats, ...lunchVegs];
+        // 近期吃过的菜（往前推2天），排菜时尽量避开这些
+        let recentIds = history.slice(-2).flat();
         
-        lunchItems.forEach(item => {
-            usedIds.push(item.id);
-            shoppingListRaw.push({ recipe: item, pax: lunchPax });
-        });
+        // --- 午餐排班 (1荤 1素) ---
+        let lunchMeats = getRandomItems(meats, 1, recentIds);
+        recentIds.push(...lunchMeats.map(m=>m.id)); // 挑出来的菜马上加入排重名单，防止同顿饭/当天的晚餐重复
+        
+        let lunchVegs = getRandomItems(vegs, 1, recentIds);
+        recentIds.push(...lunchVegs.map(v=>v.id));
 
-        // 晚餐配置: 2荤 1素 1汤
-        let dinnerMeats = getRandomItems(meats, 2, usedIds);
-        let dinnerVegs = getRandomItems(vegs, 1, usedIds.concat(dinnerMeats.map(m=>m.id)));
-        let dinnerSoups = getRandomItems(soups, 1, usedIds.concat(dinnerMeats.map(m=>m.id), dinnerVegs.map(v=>v.id)));
+        let lunchItems = [...lunchMeats, ...lunchVegs];
+        lunchItems.forEach(item => shoppingListRaw.push({ recipe: item, pax: lunchPax }));
+
+        // --- 晚餐排班 (2荤 1素 1汤) ---
+        let dinnerMeats = getRandomItems(meats, 2, recentIds);
+        recentIds.push(...dinnerMeats.map(m=>m.id));
+
+        let dinnerVegs = getRandomItems(vegs, 1, recentIds);
+        recentIds.push(...dinnerVegs.map(v=>v.id));
+
+        let dinnerSoups = getRandomItems(soups, 1, recentIds);
+        recentIds.push(...dinnerSoups.map(s=>s.id));
+
         let dinnerItems = [...dinnerMeats, ...dinnerVegs, ...dinnerSoups];
+        dinnerItems.forEach(item => shoppingListRaw.push({ recipe: item, pax: dinnerPax }));
 
-        dinnerItems.forEach(item => {
-            usedIds.push(item.id);
-            shoppingListRaw.push({ recipe: item, pax: dinnerPax });
-        });
-
-        // 每过3天清理一次usedIds，避免无菜可排
-        if (i % 3 === 0) usedIds = [];
+        // 保存今天的菜单ID到历史窗口，供明天参考
+        let todaysIds = [...lunchItems, ...dinnerItems].map(item => item.id);
+        history.push(todaysIds);
 
         dailyPlans.push({ day: i, lunch: lunchItems, dinner: dinnerItems });
     }
@@ -106,8 +109,8 @@ function renderMenu(dailyPlans) {
         let dayCard = document.createElement('div');
         dayCard.className = 'bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
         
-        let lunchHTML = plan.lunch.map(item => `<div class="flex flex-col text-sm bg-blue-50 p-2 rounded"><span class="font-semibold text-gray-700">${item.name_zh}</span><span class="text-xs text-gray-500">${item.name_my}</span></div>`).join('');
-        let dinnerHTML = plan.dinner.map(item => `<div class="flex flex-col text-sm bg-orange-50 p-2 rounded"><span class="font-semibold text-gray-700">${item.name_zh}</span><span class="text-xs text-gray-500">${item.name_my}</span></div>`).join('');
+        let lunchHTML = plan.lunch.map(item => `<div class="flex flex-col text-sm bg-blue-50 p-2 rounded"><span class="font-semibold text-gray-700">${item.name_zh || item.name_my}</span><span class="text-xs text-gray-500">${item.name_my || ''}</span></div>`).join('');
+        let dinnerHTML = plan.dinner.map(item => `<div class="flex flex-col text-sm bg-orange-50 p-2 rounded"><span class="font-semibold text-gray-700">${item.name_zh || item.name_my}</span><span class="text-xs text-gray-500">${item.name_my || ''}</span></div>`).join('');
 
         dayCard.innerHTML = `
             <h3 class="font-bold text-lg text-teal-700 mb-3 border-b pb-1">第 ${plan.day} 天 (Day ${plan.day})</h3>
@@ -128,7 +131,6 @@ function renderMenu(dailyPlans) {
 
 // 核心：处理食材合并并渲染清单
 function processAndRenderShoppingList(rawItems) {
-    // 存储结构: { "豆腐_块": { nameZh: "豆腐", nameMy: "တို့ဖူး", unit: "块", totalAmount: 5.5 } }
     const mergedIngredients = {};
 
     rawItems.forEach(mealRecord => {
@@ -137,7 +139,6 @@ function processAndRenderShoppingList(rawItems) {
         if (!item.base_portions || parseInt(item.base_portions) <= 0) return;
         const ratio = actualPax / parseInt(item.base_portions);
         
-        // 确保格式如 "豆腐:2:块; 肉沫:150:g"
         if(!item.ingredients_zh) return;
         let zhParts = item.ingredients_zh.split(';');
         let myParts = item.ingredients_my ? item.ingredients_my.split(';') : [];
@@ -147,7 +148,7 @@ function processAndRenderShoppingList(rawItems) {
             if (!zhIng) continue;
             let myIng = (myParts[i] || "").trim();
 
-            let zInfo = zhIng.split(':'); // [name, amount, unit]
+            let zInfo = zhIng.split(':');
             let mInfo = myIng.split(':');
 
             if (zInfo.length >= 2) {
@@ -173,7 +174,6 @@ function processAndRenderShoppingList(rawItems) {
         }
     });
 
-    // 渲染 UI
     const container = document.getElementById('shoppingListContainer');
     container.innerHTML = '';
     document.getElementById('shoppingSection').classList.remove('hidden');
@@ -193,7 +193,6 @@ function processAndRenderShoppingList(rawItems) {
                 <span class="text-sm text-gray-500">${ing.nameMy}</span>
             </div>
         `;
-        // Checkbox strike-through toggling
         let checkbox = row.querySelector('input');
         checkbox.addEventListener('change', function() {
             let textDiv = this.nextElementSibling;
