@@ -293,10 +293,15 @@ function openRecipeModal(id) {
     document.getElementById('modalCategory').innerText = item.category || '';
     document.getElementById('modalBasePortions').innerText = item.base_portions || '5';
 
-    // 优先使用本地/设定的图，空则使用 loremflickr 随机占位图
+    // Image Handling
     const imgEl = document.getElementById('modalImg');
-    const fallbackImage = `https://loremflickr.com/800/600/food,dish?lock=${item.id}`;
-    imgEl.src = item.image_url ? item.image_url : fallbackImage;
+    if (item.image_url) {
+        imgEl.src = item.image_url;
+        imgEl.style.display = 'block';
+    } else {
+        // 如果没有准确图片，显示一个优雅的文字占位或者隐藏
+        imgEl.src = 'https://placehold.co/800x600/f3f4f6/374151?text=No+Image'; // 或者您可以放一张本地的 default.png 
+    }
 
     // Ingredients 配料
     const ingList = document.getElementById('modalIngList');
